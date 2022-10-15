@@ -18,10 +18,11 @@ class MixerLayer(nn.Module):
 
 class MLPMixer(nn.Module):
   def __init__(
-      self, patch_size, img_size, n_channels, n_classes,
+      self, img_size, patch_size, n_channels, n_classes,
       embed_dim, token_hidden, channel_hidden, n_layers, dropout):
     super().__init__()
     assert img_size % patch_size == 0, "Image must be evenly divisible into patches"
+    self.seq_len = int((img_size // patch_size) ** 2)
     self.embed = nn.Sequential(
       Rearrange("b c (h1 h2) (w1 w2) -> b (h1 w1) (c h2 w2)", h2=patch_size, w2=patch_size),
       nn.Linear(patch_size**2 * n_channels, embed_dim)
