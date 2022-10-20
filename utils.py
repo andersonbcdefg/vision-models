@@ -1,3 +1,7 @@
+import matplotlib.pyplot as plt
+from einops import rearrange
+import numpy as np
+
 # Visualize single image
 def show_image(X):
   if len(X.shape) == 4:
@@ -7,6 +11,7 @@ def show_image(X):
   plt.imshow(image)
   plt.show()
 
+# Visualize grid of images
 def show_images(X, y=None, nrow=3, ncol=3, randomize=False):
   b, c, h, w = X.shape
   if randomize:
