@@ -39,7 +39,7 @@ class MAEVisionTransformer(nn.Module):
         TransformerBlock(dec_n_heads, dec_embed_dim, d_k, dec_ffn_hidden_dim, dropout) for _ in range(dec_depth)
     ])
 
-    # Pretraining
+    # Pretraining Head
     self.pretrain_head = nn.Sequential(
         nn.Linear(dec_embed_dim, pretrain_out_hidden_dim),
         nn.GELU(),
