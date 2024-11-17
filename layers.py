@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from einops import rearrange
 
 class MultiHeadAttention(nn.Module):
   def __init__(self, n_heads, embed_dim, d_k, dropout=0.1):

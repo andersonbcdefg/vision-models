@@ -1,16 +1,16 @@
 import torch
 import copy
 import numpy as np
-from torch import nn
+import torch.nn as nn
 from layers import TransformerBlock
 from einops.layers.torch import Rearrange
-from einops import repeat
+from einops import rearrange, repeat
 
 class MAEVisionTransformer(nn.Module):
   def __init__(self, img_size, patch_size, n_channels, mask_prob,
                enc_depth, enc_n_heads, enc_embed_dim, enc_d_k, enc_ffn_hidden_dim,
                dec_depth, dec_n_heads, dec_embed_dim, dec_d_k, dec_ffn_hidden_dim, 
-               pretrain_out_hidden_dim, dropout=0.1):
+               pretrain_head_hidden_dim, dropout):
     super().__init__()
     assert img_size % patch_size == 0, "Image must divide evenly into patches."
     self.seq_len = (img_size // patch_size) ** 2
@@ -36,19 +36,19 @@ class MAEVisionTransformer(nn.Module):
     self.enc_to_dec = nn.Linear(enc_embed_dim, dec_embed_dim)
 
     self.decoder = nn.Sequential(*[
-        TransformerBlock(dec_n_heads, dec_embed_dim, d_k, dec_ffn_hidden_dim, dropout) for _ in range(dec_depth)
+        TransformerBlock(dec_n_heads, dec_embed_dim, dec_d_k, dec_ffn_hidden_dim, dropout) for _ in range(dec_depth)
     ])
 
     # Pretraining Head
     self.pretrain_head = nn.Sequential(
-        nn.Linear(dec_embed_dim, pretrain_out_hidden_dim),
+        nn.Linear(dec_embed_dim, pretrain_head_hidden_dim),
         nn.GELU(),
         nn.Dropout(dropout),
         nn.Linear(dec_ffn_hidden_dim, patch_size**2 * n_channels)
     )
 
   def forward(self, X, pretrain=True):    
-    seq = self.embed(patches) + self.enc_pos_embs.unsqueeze(0)
+    seq = self.embed(X) + self.enc_pos_embs.unsqueeze(0)
 
     # If training, keep subsample of patches
     if pretrain:
@@ -72,12 +72,13 @@ class MAEVisionTransformer(nn.Module):
       seq = block(seq)
 
     # Output
-    return self.output_head(seq)
+    masked_idxs = perm[self.subsample_size:]
+    return masked_idxs, self.pretrain_head(seq)
 
 class MAEClassifier(nn.Module):
-  def __init__(self, pretrained_model, out_hidden_dim, n_classes, dropout=0.1):
+  def __init__(self, pretrained_model, out_hidden_dim, n_classes, dropout):
     super().__init__()
-    self.encoder = copy.deepcopy(pretrained_encoder)
+    self.encoder = copy.deepcopy(pretrained_model)
     self.classification_head = nn.Sequential(
       nn.Linear(self.encoder.enc_embed_dim, out_hidden_dim),
       nn.GELU(),
